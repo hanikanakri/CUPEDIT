@@ -1,0 +1,895 @@
+// import 'dart:io';
+//
+// import 'package:flutter/material.dart';
+// import 'package:wechat_assets_picker/wechat_assets_picker.dart';
+//
+// class FileAssetPickerBuilder
+//     extends AssetPickerBuilderDelegate<File, Directory> {
+//   FileAssetPickerBuilder({
+//     required this.provider,
+//     super.locale,
+//   }) : super(initialPermission: PermissionState.authorized);
+//
+//   final FileAssetPickerProvider provider;
+//
+//   Duration get switchingPathDuration => kThemeAnimationDuration * 1.5;
+//
+//   Curve get switchingPathCurve => Curves.easeInOut;
+//
+//   @override
+//   bool get isSingleAssetMode => provider.maxAssets == 1;
+//
+//   @override
+//   Future<void> viewAsset(
+//       BuildContext context,
+//       int? index,
+//       File currentAsset,
+//       ) async {
+//     final List<File>? result = await Navigator.of(context).push<List<File>?>(
+//       PageRouteBuilder<List<File>>(
+//         pageBuilder: (
+//             BuildContext context,
+//             Animation<double> animation,
+//             Animation<double> secondaryAnimation,
+//             ) {
+//           return AssetPickerViewer<File, Directory>(
+//             builder: FileAssetPickerViewerBuilderDelegate(
+//               currentIndex:
+//               index ?? provider.selectedAssets.indexOf(currentAsset),
+//               previewAssets: provider.selectedAssets,
+//               provider: FileAssetPickerViewerProvider(provider.selectedAssets),
+//               themeData: AssetPicker.themeData(themeColor),
+//               selectedAssets: provider.selectedAssets,
+//               selectorProvider: provider,
+//             ),
+//           );
+//         },
+//       ),
+//     );
+//     if (result != null) {
+//       Navigator.of(context).maybePop(result);
+//     }
+//   }
+//
+//   Future<List<File>?> pushToPicker(
+//       BuildContext context, {
+//         required int index,
+//         required List<File> previewAssets,
+//         List<File>? selectedAssets,
+//         FileAssetPickerProvider? selectorProvider,
+//       }) {
+//     final Widget viewer = AssetPickerViewer<File, Directory>(
+//       builder: FileAssetPickerViewerBuilderDelegate(
+//         currentIndex: index,
+//         previewAssets: previewAssets,
+//         provider: selectedAssets != null
+//             ? FileAssetPickerViewerProvider(selectedAssets)
+//             : null,
+//         themeData: AssetPicker.themeData(themeColor),
+//         selectedAssets: selectedAssets,
+//         selectorProvider: selectorProvider,
+//       ),
+//     );
+//     final PageRouteBuilder<List<File>> pageRoute = PageRouteBuilder<List<File>>(
+//       pageBuilder: (
+//           BuildContext context,
+//           Animation<double> animation,
+//           Animation<double> secondaryAnimation,
+//           ) {
+//         return viewer;
+//       },
+//       transitionsBuilder: (
+//           BuildContext context,
+//           Animation<double> animation,
+//           Animation<double> secondaryAnimation,
+//           Widget child,
+//           ) {
+//         return FadeTransition(opacity: animation, child: child);
+//       },
+//     );
+//     return Navigator.of(context).push<List<File>?>(pageRoute);
+//   }
+//
+//   @override
+//   void selectAsset(BuildContext context, File asset, int index, bool selected) {
+//     if (selected) {
+//       provider.unSelectAsset(asset);
+//     } else {
+//       if (isSingleAssetMode) {
+//         provider.selectedAssets.clear();
+//       }
+//       provider.selectAsset(asset);
+//     }
+//   }
+//
+//   @override
+//   Widget androidLayout(BuildContext context) {
+//     return Scaffold(
+//       body: Column(
+//         children: <Widget>[
+//           appBar(context),
+//           Expanded(
+//             child: Selector<FileAssetPickerProvider, bool>(
+//               selector: (
+//                   BuildContext _,
+//                   FileAssetPickerProvider provider,
+//                   ) =>
+//               provider.hasAssetsToDisplay,
+//               builder: (_, bool hasAssetsToDisplay, __) {
+//                 return AnimatedSwitcher(
+//                   duration: switchingPathDuration,
+//                   child: hasAssetsToDisplay
+//                       ? Stack(
+//                     children: <Widget>[
+//                       RepaintBoundary(
+//                         child: Column(
+//                           children: <Widget>[
+//                             Expanded(child: assetsGridBuilder(context)),
+//                             if (!isAppleOS(context))
+//                               bottomActionBar(context),
+//                           ],
+//                         ),
+//                       ),
+//                       pathEntityListBackdrop(context),
+//                       pathEntityListWidget(context),
+//                     ],
+//                   )
+//                       : loadingIndicator(context),
+//                 );
+//               },
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+//
+//   @override
+//   PreferredSizeWidget appBar(BuildContext context) {
+//     final AppBar appBar = AppBar(
+//       backgroundColor: theme.appBarTheme.backgroundColor,
+//       title: Semantics(
+//         onTapHint: semanticsTextDelegate.sActionSwitchPathLabel,
+//         child: pathEntitySelector(context),
+//       ),
+//       leading: backButton(context),
+//     );
+//     appBarPreferredSize ??= appBar.preferredSize;
+//     return appBar;
+//   }
+//
+//   @override
+//   Widget appleOSLayout(BuildContext context) {
+//     return Stack(
+//       children: <Widget>[
+//         Positioned.fill(
+//           child: Selector<FileAssetPickerProvider, bool>(
+//             selector: (_, FileAssetPickerProvider p) => p.hasAssetsToDisplay,
+//             builder: (BuildContext context, bool hasAssetsToDisplay, __) {
+//               return AnimatedSwitcher(
+//                 duration: switchingPathDuration,
+//                 child: hasAssetsToDisplay
+//                     ? Stack(
+//                   children: <Widget>[
+//                     RepaintBoundary(
+//                       child: Stack(
+//                         children: <Widget>[
+//                           Positioned.fill(
+//                             child: assetsGridBuilder(context),
+//                           ),
+//                           if (!isSingleAssetMode || isAppleOS(context))
+//                             PositionedDirectional(
+//                               bottom: 0.0,
+//                               child: bottomActionBar(context),
+//                             ),
+//                         ],
+//                       ),
+//                     ),
+//                     pathEntityListBackdrop(context),
+//                     pathEntityListWidget(context),
+//                   ],
+//                 )
+//                     : loadingIndicator(context),
+//               );
+//             },
+//           ),
+//         ),
+//         Positioned.fill(bottom: null, child: appBar(context)),
+//       ],
+//     );
+//   }
+//
+//   @override
+//   Widget loadingIndicator(BuildContext context) {
+//     return Selector<FileAssetPickerProvider, bool>(
+//       selector: (_, FileAssetPickerProvider p) => p.isAssetsEmpty,
+//       builder: (BuildContext context, bool isAssetsEmpty, Widget? w) {
+//         if (loadingIndicatorBuilder != null) {
+//           return loadingIndicatorBuilder!(context, isAssetsEmpty);
+//         }
+//         return Center(child: isAssetsEmpty ? emptyIndicator(context) : w);
+//       },
+//       child: Center(
+//         child: SizedBox.fromSize(
+//           size: Size.square(MediaQuery.sizeOf(context).width / gridCount / 3),
+//           child: CircularProgressIndicator(
+//             valueColor: AlwaysStoppedAnimation<Color>(
+//               theme.iconTheme.color ?? Colors.grey,
+//             ),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+//
+//   @override
+//   Widget assetsGridBuilder(BuildContext context) {
+//     appBarPreferredSize ??= appBar(context).preferredSize;
+//     int totalCount = provider.currentAssets.length;
+//     if (specialItemPosition != SpecialItemPosition.none) {
+//       totalCount += 1;
+//     }
+//     final int placeholderCount;
+//     if (isAppleOS(context) && totalCount % gridCount != 0) {
+//       placeholderCount = gridCount - totalCount % gridCount;
+//     } else {
+//       placeholderCount = 0;
+//     }
+//     final int row = (totalCount + placeholderCount) ~/ gridCount;
+//     final double dividedSpacing = itemSpacing / gridCount;
+//     final double topPadding =
+//         MediaQuery.paddingOf(context).top + appBarPreferredSize!.height;
+//
+//     Widget sliverGrid(BuildContext ctx, List<File> assets) {
+//       return SliverGrid(
+//         delegate: SliverChildBuilderDelegate(
+//               (_, int index) => Builder(
+//             builder: (BuildContext c) {
+//               if (isAppleOS(c)) {
+//                 if (index < placeholderCount) {
+//                   return const SizedBox.shrink();
+//                 }
+//                 index -= placeholderCount;
+//               }
+//               return Directionality(
+//                 textDirection: Directionality.of(context),
+//                 child: assetGridItemBuilder(c, index, assets),
+//               );
+//             },
+//           ),
+//           childCount: assetsGridItemCount(
+//             context: ctx,
+//             assets: assets,
+//             placeholderCount: placeholderCount,
+//           ),
+//           findChildIndexCallback: (Key? key) {
+//             if (key is ValueKey<String>) {
+//               return findChildIndexBuilder(
+//                 id: key.value,
+//                 assets: assets,
+//                 placeholderCount: placeholderCount,
+//               );
+//             }
+//             return null;
+//           },
+//         ),
+//         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+//           crossAxisCount: gridCount,
+//           mainAxisSpacing: itemSpacing,
+//           crossAxisSpacing: itemSpacing,
+//         ),
+//       );
+//     }
+//
+//     return LayoutBuilder(
+//       builder: (BuildContext c, BoxConstraints constraints) {
+//         final double itemSize = constraints.maxWidth / gridCount;
+//         // Use [ScrollView.anchor] to determine where is the first place of
+//         // the [SliverGrid]. Each row needs [dividedSpacing] to calculate,
+//         // then minus one times of [itemSpacing] because spacing's count in the
+//         // cross axis is always less than the rows.
+//         final double anchor = math.min(
+//           (row * (itemSize + dividedSpacing) + topPadding - itemSpacing) /
+//               constraints.maxHeight,
+//           1,
+//         );
+//
+//         return Directionality(
+//           textDirection: effectiveGridDirection(context),
+//           child: ColoredBox(
+//             color: theme.canvasColor,
+//             child: Selector<FileAssetPickerProvider, List<File>>(
+//               selector: (_, FileAssetPickerProvider provider) =>
+//               provider.currentAssets,
+//               builder: (context, List<File> assets, __) => CustomScrollView(
+//                 physics: const AlwaysScrollableScrollPhysics(),
+//                 controller: gridScrollController,
+//                 anchor: isAppleOS(context) ? anchor : 0,
+//                 center: isAppleOS(context) ? gridRevertKey : null,
+//                 slivers: <Widget>[
+//                   if (isAppleOS(context))
+//                     SliverToBoxAdapter(
+//                       child: SizedBox(
+//                         height: MediaQuery.paddingOf(context).top +
+//                             appBarPreferredSize!.height,
+//                       ),
+//                     ),
+//                   sliverGrid(context, assets),
+//                   // Ignore the gap when the [anchor] is not equal to 1.
+//                   if (isAppleOS(context) && anchor == 1)
+//                     SliverToBoxAdapter(
+//                       child: SizedBox(
+//                         height: MediaQuery.paddingOf(context).bottom +
+//                             bottomSectionHeight,
+//                       ),
+//                     ),
+//                   if (isAppleOS(context))
+//                     SliverToBoxAdapter(
+//                       key: gridRevertKey,
+//                       child: const SizedBox.shrink(),
+//                     ),
+//                 ],
+//               ),
+//             ),
+//           ),
+//         );
+//       },
+//     );
+//   }
+//
+//   @override
+//   Widget assetGridItemBuilder(
+//       BuildContext context,
+//       int index,
+//       List<File> currentAssets,
+//       ) {
+//     final int currentIndex = switch (specialItemPosition) {
+//       SpecialItemPosition.none || SpecialItemPosition.append => index,
+//       SpecialItemPosition.prepend => index - 1,
+//     };
+//     final File asset = currentAssets.elementAt(currentIndex);
+//     final Widget builder = imageAndVideoItemBuilder(
+//       context,
+//       currentIndex,
+//       asset,
+//     );
+//     return Stack(
+//       key: ValueKey<String>(asset.path),
+//       fit: StackFit.expand,
+//       children: <Widget>[
+//         Positioned.fill(child: builder),
+//         selectIndicator(context, index, asset),
+//       ],
+//     );
+//   }
+//
+//   @override
+//   Semantics assetGridItemSemanticsBuilder(
+//       BuildContext context,
+//       int index,
+//       File asset,
+//       Widget child,
+//       ) {
+//     return Semantics(child: child);
+//   }
+//
+//   @override
+//   int assetsGridItemCount({
+//     required BuildContext context,
+//     required List<File> assets,
+//     int placeholderCount = 0,
+//   }) {
+//     final int length = switch (specialItemPosition) {
+//       SpecialItemPosition.none => assets.length,
+//       SpecialItemPosition.prepend ||
+//       SpecialItemPosition.append =>
+//       assets.length + 1,
+//     };
+//     return length + placeholderCount;
+//   }
+//
+//   @override
+//   Widget audioIndicator(BuildContext context, File asset) {
+//     return const SizedBox.shrink();
+//   }
+//
+//   @override
+//   Widget audioItemBuilder(BuildContext context, int index, File asset) {
+//     return imageAndVideoItemBuilder(context, index, asset);
+//   }
+//
+//   @override
+//   Widget confirmButton(BuildContext context) {
+//     return Center(
+//       child: Consumer<FileAssetPickerProvider>(
+//         builder: (_, FileAssetPickerProvider provider, __) {
+//           return MaterialButton(
+//             minWidth: provider.isSelectedNotEmpty ? 48.0 : 20.0,
+//             height: appBarItemHeight,
+//             padding: const EdgeInsets.symmetric(horizontal: 12.0),
+//             color:
+//             provider.isSelectedNotEmpty ? themeColor : theme.dividerColor,
+//             shape: RoundedRectangleBorder(
+//               borderRadius: BorderRadius.circular(3.0),
+//             ),
+//             onPressed: () {
+//               if (provider.isSelectedNotEmpty) {
+//                 Navigator.of(context).pop(provider.selectedAssets);
+//               }
+//             },
+//             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+//             child: Text(
+//               provider.isSelectedNotEmpty && !isSingleAssetMode
+//                   ? '${textDelegate.confirm}'
+//                   '(${provider.selectedAssets.length}/${provider.maxAssets})'
+//                   : textDelegate.confirm,
+//               style: TextStyle(
+//                 color: provider.isSelectedNotEmpty
+//                     ? theme.textTheme.bodyLarge?.color
+//                     : theme.textTheme.bodySmall?.color,
+//                 fontSize: 17.0,
+//                 fontWeight: FontWeight.normal,
+//               ),
+//             ),
+//           );
+//         },
+//       ),
+//     );
+//   }
+//
+//   @override
+//   Widget imageAndVideoItemBuilder(BuildContext context, int index, File asset) {
+//     return RepaintBoundary(child: Image.file(asset, fit: BoxFit.cover));
+//   }
+//
+//   @override
+//   Widget pathEntityListBackdrop(BuildContext context) {
+//     return ValueListenableBuilder<bool>(
+//       valueListenable: isSwitchingPath,
+//       builder: (_, bool isSwitchingPath, __) => IgnorePointer(
+//         ignoring: !isSwitchingPath,
+//         child: GestureDetector(
+//           onTap: () => this.isSwitchingPath.value = false,
+//           child: AnimatedOpacity(
+//             duration: switchingPathDuration,
+//             opacity: isSwitchingPath ? 1.0 : 0.0,
+//             child: Container(color: Colors.black.withOpacity(0.75)),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+//
+//   @override
+//   Widget pathEntityListWidget(BuildContext context) {
+//     appBarPreferredSize ??= appBar(context).preferredSize;
+//     final double appBarHeight =
+//         appBarPreferredSize!.height + MediaQuery.paddingOf(context).top;
+//     final double maxHeight = MediaQuery.sizeOf(context).height * 0.825;
+//     return ValueListenableBuilder<bool>(
+//       valueListenable: isSwitchingPath,
+//       builder: (_, bool isSwitchingPath, Widget? w) => AnimatedPositioned(
+//         duration: switchingPathDuration,
+//         curve: switchingPathCurve,
+//         top: isAppleOS(context)
+//             ? !isSwitchingPath
+//             ? -maxHeight
+//             : appBarHeight
+//             : -(!isSwitchingPath ? maxHeight : 1.0),
+//         child: AnimatedOpacity(
+//           duration: switchingPathDuration,
+//           curve: switchingPathCurve,
+//           opacity: !isAppleOS(context) || isSwitchingPath ? 1.0 : 0.0,
+//           child: Container(
+//             width: MediaQuery.sizeOf(context).width,
+//             height: maxHeight,
+//             decoration: BoxDecoration(
+//               borderRadius: isAppleOS(context)
+//                   ? const BorderRadius.vertical(bottom: Radius.circular(10.0))
+//                   : null,
+//               color: theme.colorScheme.background,
+//             ),
+//             child: w,
+//           ),
+//         ),
+//       ),
+//       child: Selector<FileAssetPickerProvider, List<PathWrapper<Directory>>>(
+//         selector: (_, FileAssetPickerProvider p) => p.paths,
+//         builder: (_, List<PathWrapper<Directory>> paths, __) {
+//           return ListView.separated(
+//             padding: const EdgeInsetsDirectional.only(top: 1.0),
+//             itemCount: paths.length,
+//             itemBuilder: (_, int index) => pathEntityWidget(
+//               context: context,
+//               list: paths,
+//               index: index,
+//             ),
+//             separatorBuilder: (_, __) => Container(
+//               margin: const EdgeInsetsDirectional.only(start: 60.0),
+//               height: 1.0,
+//               color: theme.canvasColor,
+//             ),
+//           );
+//         },
+//       ),
+//     );
+//   }
+//
+//   @override
+//   Widget pathEntitySelector(BuildContext context) {
+//     return UnconstrainedBox(
+//       child: GestureDetector(
+//         onTap: () => isSwitchingPath.value = !isSwitchingPath.value,
+//         child: Container(
+//           height: appBarItemHeight,
+//           constraints: BoxConstraints(
+//             maxWidth: MediaQuery.sizeOf(context).width * 0.5,
+//           ),
+//           padding: const EdgeInsetsDirectional.only(start: 12.0, end: 6.0),
+//           decoration: BoxDecoration(
+//             borderRadius: BorderRadius.circular(999),
+//             color: theme.dividerColor,
+//           ),
+//           child: Row(
+//             mainAxisSize: MainAxisSize.min,
+//             children: <Widget>[
+//               Selector<FileAssetPickerProvider, PathWrapper<Directory>?>(
+//                 selector: (_, FileAssetPickerProvider p) => p.currentPath,
+//                 builder: (_, PathWrapper<Directory>? currentWrapper, __) {
+//                   if (currentWrapper == null) {
+//                     return const SizedBox.shrink();
+//                   }
+//                   return Flexible(
+//                     child: Text(
+//                       currentWrapper.path.path,
+//                       style: const TextStyle(
+//                         fontSize: 18.0,
+//                         fontWeight: FontWeight.normal,
+//                       ),
+//                       maxLines: 1,
+//                       overflow: TextOverflow.ellipsis,
+//                     ),
+//                   );
+//                 },
+//               ),
+//               Padding(
+//                 padding: const EdgeInsetsDirectional.only(start: 5.0),
+//                 child: DecoratedBox(
+//                   decoration: BoxDecoration(
+//                     shape: BoxShape.circle,
+//                     color: theme.iconTheme.color?.withOpacity(0.5),
+//                   ),
+//                   child: ValueListenableBuilder<bool>(
+//                     valueListenable: isSwitchingPath,
+//                     builder: (_, bool isSwitchingPath, Widget? w) {
+//                       return Transform.rotate(
+//                         angle: isSwitchingPath ? math.pi : 0.0,
+//                         child: w,
+//                       );
+//                     },
+//                     child: Icon(
+//                       Icons.keyboard_arrow_down,
+//                       size: 20.0,
+//                       color: theme.colorScheme.primary,
+//                     ),
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+//
+//   @override
+//   Widget pathEntityWidget({
+//     required BuildContext context,
+//     required List<PathWrapper<Directory>> list,
+//     required int index,
+//     bool isAudio = false,
+//   }) {
+//     final PathWrapper<Directory> wrapper = list[index];
+//     final Directory path = wrapper.path;
+//     final typed_data.Uint8List? data = wrapper.thumbnailData;
+//
+//     Widget builder() {
+//       if (data != null) {
+//         return Image.memory(data, fit: BoxFit.cover);
+//       } else {
+//         return ColoredBox(
+//           color: theme.colorScheme.primary.withOpacity(0.12),
+//         );
+//       }
+//     }
+//
+//     return Material(
+//       type: MaterialType.transparency,
+//       child: InkWell(
+//         splashFactory: InkSplash.splashFactory,
+//         onTap: () {
+//           provider.switchPath(wrapper);
+//           isSwitchingPath.value = false;
+//         },
+//         child: SizedBox(
+//           height: isAppleOS(context) ? 64.0 : 52.0,
+//           child: Row(
+//             children: <Widget>[
+//               RepaintBoundary(
+//                 child: AspectRatio(aspectRatio: 1.0, child: builder()),
+//               ),
+//               Expanded(
+//                 child: Padding(
+//                   padding: const EdgeInsetsDirectional.only(
+//                     start: 15.0,
+//                     end: 20.0,
+//                   ),
+//                   child: Padding(
+//                     padding: const EdgeInsetsDirectional.only(end: 10.0),
+//                     child: Text(
+//                       path.path,
+//                       style: const TextStyle(fontSize: 18.0),
+//                       maxLines: 1,
+//                       overflow: TextOverflow.ellipsis,
+//                     ),
+//                   ),
+//                 ),
+//               ),
+//               Selector<FileAssetPickerProvider, PathWrapper<Directory>>(
+//                 selector: (_, FileAssetPickerProvider p) => p.currentPath!,
+//                 builder: (_, PathWrapper<Directory> currentPathEntity, __) {
+//                   if (currentPathEntity == wrapper) {
+//                     return const AspectRatio(
+//                       aspectRatio: 1.0,
+//                       child: Icon(Icons.check, color: themeColor, size: 26.0),
+//                     );
+//                   }
+//                   return const SizedBox.shrink();
+//                 },
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+//
+//   @override
+//   Widget previewButton(BuildContext context) {
+//     return Selector<FileAssetPickerProvider, bool>(
+//       selector: (_, FileAssetPickerProvider p) => p.isSelectedNotEmpty,
+//       builder: (_, bool isSelectedNotEmpty, __) {
+//         return GestureDetector(
+//           onTap: isSelectedNotEmpty
+//               ? () async {
+//             final List<File>? result = await pushToPicker(
+//               context,
+//               index: 0,
+//               previewAssets: provider.selectedAssets,
+//               selectedAssets: provider.selectedAssets,
+//               selectorProvider: provider,
+//             );
+//             if (result != null) {
+//               Navigator.of(context).pop(result);
+//             }
+//           }
+//               : null,
+//           child: Padding(
+//             padding: const EdgeInsets.symmetric(vertical: 12.0),
+//             child: Selector<FileAssetPickerProvider, List<File>>(
+//               selector: (_, FileAssetPickerProvider p) => p.selectedAssets,
+//               builder: (_, List<File> selectedAssets, __) {
+//                 return Text(
+//                   isSelectedNotEmpty
+//                       ? '${textDelegate.preview}'
+//                       '(${provider.selectedAssets.length})'
+//                       : textDelegate.preview,
+//                   style: TextStyle(
+//                     color: isSelectedNotEmpty
+//                         ? null
+//                         : theme.textTheme.bodySmall?.color,
+//                     fontSize: 18.0,
+//                   ),
+//                 );
+//               },
+//             ),
+//           ),
+//         );
+//       },
+//     );
+//   }
+//
+//   @override
+//   Widget selectIndicator(BuildContext context, int index, File asset) {
+//     return Selector<FileAssetPickerProvider, List<File>>(
+//       selector: (_, FileAssetPickerProvider p) => p.selectedAssets,
+//       builder: (_, List<File> selectedAssets, __) {
+//         final bool isSelected =
+//             selectedAssets.where((File f) => f.path == asset.path).isNotEmpty;
+//         final double indicatorSize =
+//             MediaQuery.sizeOf(context).width / gridCount / 3;
+//         return Positioned(
+//           top: 0.0,
+//           right: 0.0,
+//           child: GestureDetector(
+//             behavior: HitTestBehavior.opaque,
+//             onTap: () {
+//               if (isSelected) {
+//                 provider.unSelectAsset(asset);
+//               } else {
+//                 if (isSingleAssetMode) {
+//                   provider.selectedAssets.clear();
+//                 }
+//                 provider.selectAsset(asset);
+//               }
+//             },
+//             child: Container(
+//               margin: EdgeInsets.all(
+//                 MediaQuery.sizeOf(context).width /
+//                     gridCount /
+//                     (isAppleOS(context) ? 12.0 : 15.0),
+//               ),
+//               width: indicatorSize,
+//               height: indicatorSize,
+//               alignment: AlignmentDirectional.topEnd,
+//               child: AnimatedContainer(
+//                 duration: switchingPathDuration,
+//                 width: indicatorSize / (isAppleOS(context) ? 1.25 : 1.5),
+//                 height: indicatorSize / (isAppleOS(context) ? 1.25 : 1.5),
+//                 decoration: BoxDecoration(
+//                   border: !isSelected
+//                       ? Border.all(color: Colors.white, width: 2.0)
+//                       : null,
+//                   color: isSelected ? themeColor : null,
+//                   shape: BoxShape.circle,
+//                 ),
+//                 child: AnimatedSwitcher(
+//                   duration: switchingPathDuration,
+//                   reverseDuration: switchingPathDuration,
+//                   child: isSelected
+//                       ? isSingleAssetMode
+//                       ? const Icon(Icons.check, size: 18.0)
+//                       : Text(
+//                     '${index + 1}',
+//                     style: TextStyle(
+//                       color: isSelected
+//                           ? theme.textTheme.bodyLarge?.color
+//                           : null,
+//                       fontSize: isAppleOS(context) ? 16.0 : 14.0,
+//                       fontWeight: isAppleOS(context)
+//                           ? FontWeight.w600
+//                           : FontWeight.bold,
+//                     ),
+//                   )
+//                       : const SizedBox.shrink(),
+//                 ),
+//               ),
+//             ),
+//           ),
+//         );
+//       },
+//     );
+//   }
+//
+//   @override
+//   Widget selectedBackdrop(BuildContext context, int index, File asset) {
+//     return Selector<FileAssetPickerProvider, List<File>>(
+//       selector: (_, FileAssetPickerProvider p) => p.selectedAssets,
+//       builder: (_, List<File> selectedAssets, __) {
+//         final bool isSelected =
+//             selectedAssets.where((File f) => f.path == asset.path).isNotEmpty;
+//         return Positioned.fill(
+//           child: GestureDetector(
+//             onTap: () async {
+//               final List<File>? result = await pushToPicker(
+//                 context,
+//                 index: index,
+//                 previewAssets: provider.currentAssets,
+//               );
+//               if (result != null) {
+//                 Navigator.of(context).pop(result);
+//               }
+//             },
+//             child: AnimatedContainer(
+//               duration: switchingPathDuration,
+//               color: isSelected
+//                   ? theme.colorScheme.primary.withOpacity(0.45)
+//                   : Colors.black.withOpacity(0.1),
+//             ),
+//           ), // 点击预览同目录下所有资源
+//         );
+//       },
+//     );
+//   }
+//
+//   @override
+//   Widget videoIndicator(BuildContext context, File asset) {
+//     return const SizedBox.shrink();
+//   }
+//
+//   @override
+//   int findChildIndexBuilder({
+//     required String id,
+//     required List<File> assets,
+//     int placeholderCount = 0,
+//   }) {
+//     return assets.indexWhere((File file) => file.path == id);
+//   }
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return AnnotatedRegion<SystemUiOverlayStyle>(
+//       value: overlayStyle,
+//       child: Theme(
+//         data: theme,
+//         child: ChangeNotifierProvider<FileAssetPickerProvider>.value(
+//           value: provider,
+//           builder: (BuildContext c, __) => Material(
+//             color: theme.canvasColor,
+//             child: Stack(
+//               fit: StackFit.expand,
+//               children: <Widget>[
+//                 if (isAppleOS(context)) appleOSLayout(c) else androidLayout(c),
+//                 if (Platform.isIOS) iOSPermissionOverlay(c),
+//               ],
+//             ),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+
+
+/*import 'package:extended_image/extended_image.dart';
+import 'package:flutter/material.dart';
+import 'package:wechat_assets_picker/wechat_assets_picker.dart';
+
+class InstaAssetPickerViewerBuilder
+    extends DefaultAssetPickerViewerBuilderDelegate {
+  InstaAssetPickerViewerBuilder({
+    required super.currentIndex,
+    required super.previewAssets,
+    required super.themeData,
+    super.selectorProvider,
+    super.provider,
+    super.selectedAssets,
+    super.maxAssets,
+    super.shouldReversePreview,
+    super.selectPredicate,
+    required this.onPreviewChanged,
+  });
+
+  final Function(int index) onPreviewChanged;
+
+  Widget _pageViewBuilder(BuildContext context) {
+    // update pageController to display `currentIndex`
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (pageController.hasClients &&
+          !pageController.position.isScrollingNotifier.value) {
+        pageController.jumpToPage(currentIndex);
+      }
+    });
+
+    return Semantics(
+      sortKey: ordinalSortKey(1),
+      child: ExtendedImageGesturePageView.builder(
+        controller: pageController,
+        itemCount: previewAssets.length,
+        itemBuilder: assetPageBuilder,
+        reverse: shouldReversePreview,
+        onPageChanged: (int index) {
+          currentIndex = index;
+          pageStreamController.add(index);
+          onPreviewChanged(index);
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => _pageViewBuilder(context);
+}*/
+
+
